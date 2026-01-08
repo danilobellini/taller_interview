@@ -97,8 +97,9 @@ class User:
 class MiniVenmo:
     def create_user(self, username, balance, credit_card_number):
         user = User(username)
-        user.balance = balance
-        user.credit_card_number = credit_card_number
+        user.add_to_balance(balance)
+        if credit_card_number is not None:
+            user.add_credit_card(credit_card_number)
         return user
 
     def render_feed(self, feed):
@@ -141,6 +142,13 @@ class TestUser(unittest.TestCase):
         self.assertEqual(me.username, "Danilo")
         self.assertEqual(me.balance, 15.22)
         self.assertEqual(me.credit_card_number, "4111111111111111")
+
+    def test_user_creation_without_credit_card(self):
+        venmo = MiniVenmo()
+        me = venmo.create_user("Danilo", 122.51, None)
+        self.assertEqual(me.username, "Danilo")
+        self.assertEqual(me.balance, 122.51)
+        self.assertIsNone(me.credit_card_number)
 
 
 if __name__ == '__main__':
