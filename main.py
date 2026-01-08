@@ -223,6 +223,7 @@ class TestUser(unittest.TestCase):
 
         self.assertAlmostEqual(bobby.balance, 6.75, places=5)
         self.assertAlmostEqual(carol.balance, 8.25, places=5)
+        self.assertEqual(venmo.activity, [payment1, payment2])
 
     def test_payment_bobby_cant_pay_for_himself(self):
         venmo = MiniVenmo()
@@ -233,6 +234,7 @@ class TestUser(unittest.TestCase):
             bobby.pay_with_balance(bobby, 1.50, "Tea")
         with self.assertRaises(PaymentException):
             bobby.pay_with_card(bobby, 1.50, "Tea")
+        self.assertEqual(venmo.activity, [])
 
     def test_payment_carol_cant_pay_negative_amount(self):
         venmo = MiniVenmo()
@@ -244,6 +246,7 @@ class TestUser(unittest.TestCase):
             carol.pay_with_balance(bobby, -1.50, "Tea")
         with self.assertRaises(PaymentException):
             carol.pay_with_card(bobby, -1.50, "Tea")
+        self.assertEqual(venmo.activity, [])
 
     def test_payment_balance_carol_insufficient_funds(self):
         venmo = MiniVenmo()
@@ -251,6 +254,7 @@ class TestUser(unittest.TestCase):
         carol = venmo.create_user("Carol", 10.00, "4242424242424242")
         with self.assertRaises(PaymentException):
             carol.pay_with_balance(bobby, 10.50, "Mirror")
+        self.assertEqual(venmo.activity, [])
 
     def test_payment_credit_card_missing(self):
         venmo = MiniVenmo()
@@ -258,6 +262,7 @@ class TestUser(unittest.TestCase):
         carol = venmo.create_user("Carol", 10.00, None)
         with self.assertRaises(PaymentException):
             carol.pay_with_card(bobby, 10.50, "Mirror")
+        self.assertEqual(venmo.activity, [])
 
     @mock.patch.object(target=User, attribute="_charge_credit_card")
     def test_payment_credit_card(self, charge_mock: mock.MagicMock):
@@ -275,6 +280,18 @@ class TestUser(unittest.TestCase):
 
         self.assertEqual(bobby.balance, 5.00)  # Credit (to be paid)
         self.assertEqual(carol.balance, 15.50)  # Already received
+        self.assertEqual(venmo.activity, [payment])
+
+    def test_friendship(self):
+        venmo = MiniVenmo()
+        bobby = venmo.create_user("Bobby", 5.00, "4111111111111111")
+        carol = venmo.create_user("Carol", 10.00, "4242424242424242")
+        bobby.add_friend(carol)
+        self.assertEqual(len(venmo.activity), 1)
+        fship = venmo.activity[0]
+        self.assertIsInstance(fship, Friendship)
+        self.assertEqual(fship.actor, bobby)
+        self.assertEqual(fship.target, carol)
 
 
 if __name__ == '__main__':
