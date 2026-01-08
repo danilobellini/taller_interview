@@ -26,6 +26,13 @@ class Payment:
         self.note = note
 
 
+class Friendship:
+
+    def __init__(self, actor, target):
+        self.actor = actor
+        self.target = target
+
+
 class User:
 
     def __init__(self, username):
@@ -37,13 +44,20 @@ class User:
         else:
             raise UsernameException('Username not valid.')
 
+        self.venmo = None
+
+    def register_venmo(self, venmo):
+        self.venmo = venmo
+
     def retrieve_feed(self):
-        # TODO: add code here
-        return []
+        return [
+            entry for entry in self.venmo.activity
+            if self in (entry.actor, entry.target)
+        ]
 
     def add_friend(self, new_friend):
-        # TODO: add code here
-        pass
+        friendship = Friendship(self, new_friend)
+        self.venmo.activity.append(friendship)
 
     def add_to_balance(self, amount):
         self.balance += float(amount)
@@ -57,6 +71,11 @@ class User:
 
         else:
             raise CreditCardException('Invalid credit card number.')
+
+    def create_payment(self, amount, target, note):
+        payment = Payment(amount, self, target, note)
+        self.venmo.activity.append(payment)
+        return payment
 
     def pay(self, target, amount, note):
         try:
@@ -78,10 +97,8 @@ class User:
             raise PaymentException('Must have a credit card to make a payment.')
 
         self._charge_credit_card(self.credit_card_number, amount)
-        payment = Payment(amount, self, target, note)
         target.add_to_balance(amount)
-
-        return payment
+        return self.create_payment(amount, target, note)
 
     def pay_with_balance(self, target, amount, note):
         amount = float(amount)
@@ -97,8 +114,7 @@ class User:
 
         self.add_to_balance(-amount)
         target.add_to_balance(amount)
-        payment = Payment(amount, self, target, note)
-        return payment
+        return self.create_payment(amount, target, note)
 
     def _is_valid_credit_card(self, credit_card_number):
         return credit_card_number in ["4111111111111111", "4242424242424242"]
@@ -112,18 +128,34 @@ class User:
 
 
 class MiniVenmo:
+
+    def __init__(self):
+        self.activity = []
+
     def create_user(self, username, balance, credit_card_number):
         user = User(username)
         user.add_to_balance(balance)
         if credit_card_number is not None:
             user.add_credit_card(credit_card_number)
+        user.register_venmo(self)
         return user
 
     def render_feed(self, feed):
         # Bobby paid Carol $5.00 for Coffee
         # Carol paid Bobby $15.00 for Lunch
-        # TODO: add code here
-        pass
+        for entry in feed:
+            if isinstance(entry, Payment):
+                print(
+                    f"{entry.actor.username} paid {entry.target.username}"
+                    f" ${entry.amount:.02f} for {entry.note}"
+                )
+            elif isinstance(entry, Friendship):
+                print(
+                    f"{entry.actor.username} became a friend of"
+                    f" {entry.target.username}"
+                )
+            else:
+                raise ValueError("Invalid feed entry")
 
     @classmethod
     def run(cls):
@@ -135,7 +167,7 @@ class MiniVenmo:
         try:
             # should complete using balance
             bobby.pay(carol, 5.00, "Coffee")
- 
+
             # should complete using card
             carol.pay(bobby, 15.00, "Lunch")
         except PaymentException as e:
@@ -159,6 +191,7 @@ class TestUser(unittest.TestCase):
         self.assertEqual(me.username, "Danilo")
         self.assertEqual(me.balance, 15.22)
         self.assertEqual(me.credit_card_number, "4111111111111111")
+        self.assertEqual(me.venmo, venmo)
 
     def test_user_creation_without_credit_card(self):
         venmo = MiniVenmo()
