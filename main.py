@@ -96,8 +96,10 @@ class User:
 
 class MiniVenmo:
     def create_user(self, username, balance, credit_card_number):
-        # TODO: add code here
-        pass
+        self.user = User(username)
+        self.balance = balance
+        self.credit_card_number = credit_card_number
+        # return self
 
     def render_feed(self, feed):
         # Bobby paid Carol $5.00 for Coffee
@@ -132,6 +134,13 @@ class TestUser(unittest.TestCase):
     def test_this_works(self):
         with self.assertRaises(UsernameException):
             raise UsernameException()
+
+    def test_user_creation(self):
+        venmo = MiniVenmo()
+        venmo.create_user("Danilo", 15.22, "4111111111111111")
+        self.assertEqual(venmo.user.username, "Danilo")
+        self.assertEqual(venmo.balance, 15.22)
+        self.assertEqual(venmo.credit_card_number, "4111111111111111")
 
 
 if __name__ == '__main__':
